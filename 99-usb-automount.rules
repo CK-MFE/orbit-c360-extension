@@ -1,0 +1,5 @@
+ACTION=="add", KERNEL=="sd[a-z]*", SUBSYSTEM=="block", \
+RUN{program}+="/usr/bin/systemd-mount -o flush --fsck=no --no-block --automount=yes --collect $devnode"
+
+ACTION=="remove", KERNEL=="sd[a-z]*", SUBSYSTEM=="block", \
+RUN{program}+="/usr/bin/systemd-umount $devnode"

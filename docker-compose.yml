@@ -1,0 +1,24 @@
+version: "3.5"
+services:
+  fetch_detector:
+    image: c360_service:1.4.0
+    network_mode: host
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      # Needed to access the C360 device
+      - /dev:/dev
+      # Spot configuration
+      - ./config.py:/armored_app/app/config.py:ro
+      # Mount payload credentials.
+      - c360_creds:/opt/payload_credentials
+      # Persistent storage for sensor logs
+      - sensor_logs:/armored_app/app/sensor_logs
+      # Removable media location for backing up log files
+      - /run/media/system:/media:shared
+    logging:
+      driver: local
+volumes:
+  c360_creds:
+  sensor_logs:
+

@@ -1,0 +1,15 @@
+{
+    "description": "C360 Sensor Service",
+    "version": "1.4.0",
+    "icon": "flir-logo-256.png",
+    "udev_rules": "99-usb-automount.rules",
+    "images": [
+        "c360_service.tar.gz"
+    ],
+    "platforms": [
+        {
+            "os": "linux",
+            "architecture": "amd64"
+        }
+    ]
+}
