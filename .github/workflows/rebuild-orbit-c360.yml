@@ -1,0 +1,64 @@
+name: Rebuild Orbit C360
+
+on:
+  push:
+    paths:
+      - 'Dockerfile.amd64'
+      - 'docker-compose.yml'
+      - 'manifest.json'
+      - 'flir-logo-256.png'
+      - 'config.py'
+      - '99-usb-automount.rules'
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Register QEMU emulation
+        run: |
+          docker run --rm --privileged tonistiigi/binfmt --install all
+
+      - name: Setup Docker Buildx
+        run: |
+          docker buildx create --name multiarch_builder --use
+          docker buildx inspect --bootstrap
+
+      - name: Build x86_64 image
+        working-directory: .
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --tag c360_service:1.4.0 \
+            --file Dockerfile.amd64 \
+            --load \
+            .
+
+      - name: Save x86_64 image to tar.gz (creates c360_service.tar.gz)
+        run: |
+          docker save c360_service:1.4.0 | gzip > c360_service.tar.gz
+
+      - name: Install Python & Spot SDK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip git
+          pip3 install spot-sdk
+
+      - name: Run build_extension.py to produce c360service_orbit.spx
+        run: |
+          python3 "$(python3 -c 'import spot_sdk; import os; print(os.path.dirname(spot_sdk.__file__) + \"/examples/extensions/build_extension.py\")')" \
+            --dockerfile-paths ./Dockerfile.amd64 \
+            --build-image-tags c360_service:1.4.0 \
+            --image-archive ./c360_service.tar.gz \
+            --icon ./flir-logo-256.png \
+            --package-dir ./ \
+            --spx c360service_orbit.spx
+
+      - name: Upload the final .spx as an artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: c360service_orbit.spx
+          path: c360service_orbit.spx
