@@ -60,7 +60,8 @@ jobs:
             --spx c360service_orbit.spx
 
       - name: Upload the final .spx as an artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: c360service_orbit.spx
-          path: c360service_orbit.spx
+          uses: actions/upload-artifact@v3
+          with:
+            name: c360service_orbit.spx
+            path: c360service_orbit.spx
+
