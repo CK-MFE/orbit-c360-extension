@@ -1,7 +1,10 @@
 name: Rebuild Orbit C360
 
 on:
-  workflow_dispatch:    # <-- allows manual runs
+  # Allow manual “Run workflow” via the GitHub UI
+  workflow_dispatch:
+
+  # Also re‐run on any change to the six small “watched” files
   push:
     paths:
       - 'Dockerfile.amd64'
@@ -13,22 +16,26 @@ on:
 
 jobs:
   build-and-package:
+    # Use a currently‐supported runner
     runs-on: ubuntu-22.04
 
     steps:
+      # 1) Check out your repository
       - name: Checkout repo
         uses: actions/checkout@v3
-      # … (rest of your steps here) …
 
+      # 2) Register QEMU so we can build an amd64 image anywhere
       - name: Register QEMU emulation
         run: |
           docker run --rm --privileged tonistiigi/binfmt --install all
 
+      # 3) Set up Docker Buildx (for cross‐compiling)
       - name: Setup Docker Buildx
         run: |
           docker buildx create --name multiarch_builder --use
           docker buildx inspect --bootstrap
 
+      # 4) Build the x86_64 Docker image
       - name: Build x86_64 image
         working-directory: .
         run: |
@@ -39,16 +46,19 @@ jobs:
             --load \
             .
 
+      # 5) Save that image into a tarball (fills in c360_service.tar.gz)
       - name: Save x86_64 image to tar.gz (creates c360_service.tar.gz)
         run: |
           docker save c360_service:1.4.0 | gzip > c360_service.tar.gz
 
+      # 6) Install Python3, pip, git, and the Spot SDK
       - name: Install Python & Spot SDK
         run: |
           sudo apt-get update
           sudo apt-get install -y python3 python3-pip git
           pip3 install spot-sdk
 
+      # 7) Run Boston Dynamics’ build_extension.py to produce the .spx
       - name: Run build_extension.py to produce c360service_orbit.spx
         run: |
           python3 "$(python3 -c 'import spot_sdk; import os; print(os.path.dirname(spot_sdk.__file__) + \"/examples/extensions/build_extension.py\")')" \
@@ -59,10 +69,9 @@ jobs:
             --package-dir ./ \
             --spx c360service_orbit.spx
 
+      # 8) Upload the final .spx as an artifact so you can download it
       - name: Upload the final .spx as an artifact
-          uses: actions/upload-artifact@v3
-          with:
-            name: c360service_orbit.spx
-            path: c360service_orbit.spx
-            
-
+        uses: actions/upload-artifact@v3
+        with:
+          name: c360service_orbit.spx
+          path: c360service_orbit.spx
